@@ -29,20 +29,56 @@ public class Deck : MonoBehaviour
 
     private void InitCardValues()
     {
-        /*TODO:
-         * Asignar un valor a cada una de las 52 cartas del atributo "values".
-         * En principio, la posición de cada valor se deberá corresponder con la posición de faces. 
-         * Por ejemplo, si en faces[1] hay un 2 de corazones, en values[1] debería haber un 2.
-         */
+        // Recorremos las 52 posiciones de la baraja
+        for (int i = 0; i < 52; i++)
+        {
+            // El operador de módulo nos da la posición de la carta dentro de su palo (de 0 a 12)
+            int cardRank = i % 13;
+
+            // 1. Caso del As: Según las reglas, puede valer 1 u 11.
+            if (cardRank == 0)
+            {
+                // Generalmente se inicializa como 11. 
+                // La reducción a 1 cuando el jugador se pasa de 21 se suele gestionar matemáticamente en la clase CardHand al hacer el recuento.
+                values[i] = 11;
+            }
+            // 2. Caso de las figuras (J, Q, K): Tienen una puntuación de 10 puntos.
+            else if (cardRank >= 10)
+            {
+                values[i] = 10;
+            }
+            // 3. Caso de cartas numéricas (2 al 10): Equivalen al valor de su carta.
+            else
+            {
+                // Como las posiciones en programación empiezan en 0, sumamos 1 al índice local del palo para obtener su valor real.
+                // Ejemplo: El '2' está en la posición 1 (1 + 1 = 2).
+                values[i] = cardRank + 1;
+            }
+        }
     }
 
     private void ShuffleCards()
     {
-        /*TODO:
-         * Barajar las cartas aleatoriamente.
-         * El método Random.Range(0,n), devuelve un valor entre 0 y n-1
-         * Si lo necesitas, puedes definir nuevos arrays.
-         */       
+        // Recorremos el array de cartas (puedes usar faces.Length que es 52)
+        for (int i = 0; i < faces.Length; i++)
+        {
+            // 1. Elegimos una posición aleatoria dentro de la baraja
+            // Random.Range(0, n) devuelve un valor entre 0 y n-1, justo lo que necesitamos para los índices.
+            int randomIndex = Random.Range(0, faces.Length);
+
+            // 2. Guardamos los datos de la carta actual (i) en variables temporales
+            Sprite tempFace = faces[i];
+            int tempValue = values[i];
+
+            // 3. Movemos la carta de la posición aleatoria a la posición actual (i)
+            // ¡Importante hacer el cambio en AMBOS arrays a la vez!
+            faces[i] = faces[randomIndex];
+            values[i] = values[randomIndex];
+
+            // 4. Ponemos la carta que guardamos en la posición aleatoria
+            faces[randomIndex] = tempFace;
+            values[randomIndex] = tempValue;
+        }
     }
 
     void StartGame()
