@@ -7,80 +7,75 @@ public class CardHand : MonoBehaviour
     public GameObject card;
     public bool isDealer = false;
     public int points;
-    private int coordY;    
-     
+    private int coordY;
+
     private void Awake()
     {
         points = 0;
-        coordY = isDealer ? -1 : 3;
+        if (!isDealer)
+            coordY = 3;
+        else
+            coordY = -1;
     }
 
     public void Clear()
     {
         points = 0;
-        foreach (GameObject g in cards) Destroy(g);
+        if (!isDealer)
+            coordY = 3;
+        else
+            coordY = -1;
+        foreach (GameObject g in cards)
+        {
+            Destroy(g);
+        }
         cards.Clear();
+    }
+
+    public void InitialToggle()
+    {
+        cards[0].GetComponent<CardModel>().ToggleFace(true);
     }
 
     public void Push(Sprite front, int value)
     {
-        GameObject cardCopy = Instantiate(card);
+        GameObject cardCopy = (GameObject)Instantiate(card);
         cards.Add(cardCopy);
 
-        float coordX = 1.4f * (cards.Count - 4);
-        cardCopy.transform.position = new Vector3(coordX, coordY);
+        float coordX = (float)1.4 * (float)(cards.Count - 4);
+        Vector3 pos = new Vector3(coordX, coordY);
+        cardCopy.transform.position = pos;
 
-        CardModel model = cardCopy.GetComponent<CardModel>();
-        model.front = front;
-        model.value = value;
+        cardCopy.GetComponent<CardModel>().front = front;
+        cardCopy.GetComponent<CardModel>().value = value;
 
-        // Si es dealer, la primera carta se queda boca abajo
         if (isDealer && cards.Count <= 1)
-            model.ToggleFace(false);
+            cardCopy.GetComponent<CardModel>().ToggleFace(false);
         else
-            model.ToggleFace(true);
+            cardCopy.GetComponent<CardModel>().ToggleFace(true);
 
-        CalculatePoints();
-    }
-
-    // Nueva función para que Deck.cs pueda calcular probabilidades
-    public int GetVisiblePoints()
-    {
-        int total = 0;
-        int aces = 0;
-        foreach (GameObject c in cards)
-        {
-            CardModel m = c.GetComponent<CardModel>();
-            // Solo sumamos si la carta está boca arriba (el SpriteRenderer no es el back)
-            if (m.GetComponent<SpriteRenderer>().sprite == m.front)
-            {
-                total += m.value;
-                if (m.value == 11) aces++;
-            }
-        }
-        while (total > 21 && aces > 0) { total -= 10; aces--; }
-        return total;
-    }
-
-    private void CalculatePoints()
-    {
         int val = 0;
         int aces = 0;
         foreach (GameObject f in cards)
         {
-            int cVal = f.GetComponent<CardModel>().value;
-            val += cVal;
-            if (cVal == 11) aces++;
+            if (f.GetComponent<CardModel>().value != 11)
+                val += f.GetComponent<CardModel>().value;
+            else
+                aces++;
         }
 
-        // Lógica robusta de Ases: si te pasas de 21, el As vale 1 (restamos 10)
-        while (val > 21 && aces > 0)
+        for (int i = 0; i < aces; i++)
         {
-            val -= 10;
-            aces--;
+            if (val + 11 <= 21)
+            {
+                val = val + 11;
+            }
+            else
+            {
+                val = val + 1;
+            }
         }
+
         points = val;
     }
-
-
 }
