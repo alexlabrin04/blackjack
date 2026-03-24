@@ -17,8 +17,7 @@ public class Deck : MonoBehaviour
        
     private void Awake()
     {    
-        InitCardValues();        
-
+        InitCardValues();
     }
 
     private void Start()
@@ -87,20 +86,92 @@ public class Deck : MonoBehaviour
         {
             PushPlayer();
             PushDealer();
-            /*TODO:
-             * Si alguno de los dos obtiene Blackjack, termina el juego y mostramos mensaje
-             */
+            // TODO resuelto: comprobamos Blackjack tras el reparto inicial
+            bool playerBlackjack = player.GetComponent<CardHand>().points == 21;
+            bool dealerBlackjack = dealer.GetComponent<CardHand>().points == 21;
+
+            if (playerBlackjack || dealerBlackjack)
+            {
+                // Revelamos la carta oculta del dealer
+                dealer.GetComponent<CardHand>().cards[0]
+                      .GetComponent<CardModel>().ToggleFace(true);
+
+                if (playerBlackjack && dealerBlackjack)
+                    finalMessage.text = "EMPATE - Ambos tienen Blackjack";
+                else if (playerBlackjack)
+                    finalMessage.text = "BLACKJACK - Ganas!";
+                else
+                    finalMessage.text = "BLACKJACK del dealer - Pierdes!";
+
+                hitButton.interactable = false;
+                stickButton.interactable = false;
+            }
         }
     }
 
     private void CalculateProbabilities()
     {
-        /*TODO:
-         * Calcular las probabilidades de:
-         * - Teniendo la carta oculta, probabilidad de que el dealer tenga más puntuación que el jugador
-         * - Probabilidad de que el jugador obtenga entre un 17 y un 21 si pide una carta
-         * - Probabilidad de que el jugador obtenga más de 21 si pide una carta          
-         */
+        // Cartas que quedan por repartir en la baraja
+        int remaining = faces.Length - cardIndex;
+
+        if (remaining <= 0)
+        {
+            probMessage.text = "No quedan cartas en la baraja.";
+            return;
+        }
+
+        int playerPoints = player.GetComponent<CardHand>().points;
+        int dealerVisiblePoints = dealer.GetComponent<CardHand>().GetVisiblePoints();
+
+        // ── Prob. A: el dealer supera al jugador con la carta oculta ──────
+        // Sumamos cuántas de las cartas restantes hacen que el total del dealer
+        // (visible + oculta) supere la puntuación del jugador.
+        int dealerBeatsCount = 0;
+        for (int i = cardIndex; i < faces.Length; i++)
+        {
+            int dealerTotal = dealerVisiblePoints + values[i];
+            // El As oculto puede valer 1 si con 11 se pasa
+            if (dealerTotal > 21 && values[i] == 11)
+                dealerTotal -= 10;
+
+            if (dealerTotal > playerPoints && dealerTotal <= 21)
+                dealerBeatsCount++;
+        }
+        float probDealerBeats = (float)dealerBeatsCount / remaining * 100f;
+
+        // ── Prob. B: el jugador obtiene entre 17 y 21 pidiendo una carta ──
+        int safeCount = 0;
+        for (int i = cardIndex; i < faces.Length; i++)
+        {
+            int newTotal = playerPoints + values[i];
+            // Ajuste del As si se pasa
+            if (newTotal > 21 && values[i] == 11)
+                newTotal -= 10;
+
+            if (newTotal >= 17 && newTotal <= 21)
+                safeCount++;
+        }
+        float probSafe = (float)safeCount / remaining * 100f;
+
+        // ── Prob. C: el jugador se pasa de 21 pidiendo una carta ──────────
+        int bustCount = 0;
+        for (int i = cardIndex; i < faces.Length; i++)
+        {
+            int newTotal = playerPoints + values[i];
+            if (newTotal > 21 && values[i] == 11)
+                newTotal -= 10;
+
+            if (newTotal > 21)
+                bustCount++;
+        }
+        float probBust = (float)bustCount / remaining * 100f;
+
+        // ── Mostramos el resultado ─────────────────────────────────────────
+        probMessage.text =
+            $"Cartas restantes: {remaining}\n" +
+            $"P(dealer supera al jugador): {probDealerBeats:F1}%\n" +
+            $"P(jugador 17-21 si pide):    {probSafe:F1}%\n" +
+            $"P(jugador se pasa si pide):  {probBust:F1}%";
     }
 
     void PushDealer()
@@ -124,31 +195,57 @@ public class Deck : MonoBehaviour
 
     public void Hit()
     {
-        /*TODO: 
-         * Si estamos en la mano inicial, debemos voltear la primera carta del dealer.
-         */
-        
-        //Repartimos carta al jugador
+        // TODO resuelto: voltear carta oculta del dealer si es la mano inicial
+        // La mano inicial son exactamente 2 cartas. Si el jugador pide por
+        // primera vez, el dealer sigue con 2 cartas y la primera está oculta.
+        if (dealer.GetComponent<CardHand>().cards.Count == 2)
+        {
+            dealer.GetComponent<CardHand>().cards[0]
+                  .GetComponent<CardModel>().ToggleFace(true);
+        }
+
+        // Repartimos carta al jugador (ya estaba en el original)
         PushPlayer();
 
-        /*TODO:
-         * Comprobamos si el jugador ya ha perdido y mostramos mensaje
-         */      
-
+        // TODO resuelto: comprobamos si el jugador pierde
+        if (player.GetComponent<CardHand>().points > 21)
+        {
+            finalMessage.text = "Te has pasado de 21 - Pierdes!";
+            hitButton.interactable = false;
+            stickButton.interactable = false;
+        }
     }
 
     public void Stand()
     {
-        /*TODO: 
-         * Si estamos en la mano inicial, debemos voltear la primera carta del dealer.
-         */
+        // TODO resuelto: voltear carta oculta del dealer si no se ha hecho aún
+        if (dealer.GetComponent<CardHand>().cards.Count >= 2)
+        {
+            dealer.GetComponent<CardHand>().cards[0]
+                  .GetComponent<CardModel>().ToggleFace(true);
+        }
 
-        /*TODO:
-         * Repartimos cartas al dealer si tiene 16 puntos o menos
-         * El dealer se planta al obtener 17 puntos o más
-         * Mostramos el mensaje del que ha ganado
-         */                
-         
+        // TODO resuelto: el dealer pide carta mientras tenga 16 o menos
+        while (dealer.GetComponent<CardHand>().points <= 16)
+        {
+            PushDealer();
+        }
+
+        // TODO resuelto: determinamos quién gana y mostramos el mensaje
+        int playerPoints = player.GetComponent<CardHand>().points;
+        int dealerPoints = dealer.GetComponent<CardHand>().points;
+
+        if (dealerPoints > 21)
+            finalMessage.text = "El dealer se pasa - Ganas!";
+        else if (playerPoints > dealerPoints)
+            finalMessage.text = "Ganas! " + playerPoints + " vs " + dealerPoints;
+        else if (dealerPoints > playerPoints)
+            finalMessage.text = "El dealer gana: " + dealerPoints + " vs " + playerPoints;
+        else
+            finalMessage.text = "Empate! " + playerPoints + " puntos";
+
+        hitButton.interactable = false;
+        stickButton.interactable = false;
     }
 
     public void PlayAgain()
