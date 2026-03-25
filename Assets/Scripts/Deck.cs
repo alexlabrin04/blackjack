@@ -70,7 +70,10 @@ public class Deck : MonoBehaviour
             PushDealer();
         }
 
-        // Punto 2 del PDF: si alguno tiene Blackjack en las 2 primeras cartas, gana
+        // Accedemos a la 1ª carta del dealer (índice 0) y forzamos que se ponga boca abajo (false)
+        dealer.GetComponent<CardHand>().cards[0].GetComponent<CardModel>().ToggleFace(false);
+
+        // Si alguno tiene Blackjack en las 2 primeras cartas, gana
         bool playerBJ = player.GetComponent<CardHand>().points == 21;
         bool dealerBJ = dealer.GetComponent<CardHand>().points == 21;
 
@@ -93,7 +96,6 @@ public class Deck : MonoBehaviour
 
     private void CalculateProbabilities()
     {
-        // Cartas que quedan por repartir
         int remaining = faces.Length - cardIndex;
 
         if (remaining <= 0)
@@ -104,49 +106,97 @@ public class Deck : MonoBehaviour
 
         int playerPoints = player.GetComponent<CardHand>().points;
 
-        // Puntos visibles del dealer: saltamos la carta 0 que esta oculta
-        // Solo usamos cartas desde el indice 1 en adelante
-        CardHand dealerHand = dealer.GetComponent<CardHand>();
-        int dealerVisiblePoints = 0;
-        for (int i = 1; i < dealerHand.cards.Count; i++)
-            dealerVisiblePoints += dealerHand.cards[i].GetComponent<CardModel>().value;
-
-        // PROB A: probabilidad de que el dealer supere al jugador con la carta oculta
-        // Probamos cada carta restante como posible carta oculta del dealer
+        // Contadores para nuestros casos de éxito
         int dealerBeats = 0;
-        for (int i = cardIndex; i < faces.Length; i++)
-        {
-            int hiddenVal = values[i];
-            int dealerTotal = dealerVisiblePoints + hiddenVal;
-            if (dealerTotal > 21 && hiddenVal == 11) dealerTotal -= 10; // ajuste As
-            if (dealerTotal > playerPoints && dealerTotal <= 21) dealerBeats++;
-        }
-        float probA = (float)dealerBeats / remaining * 100f;
-
-        // PROB B: probabilidad de que el jugador obtenga entre 17 y 21 pidiendo carta
         int safePicks = 0;
-        for (int i = cardIndex; i < faces.Length; i++)
-        {
-            int newTotal = playerPoints + values[i];
-            if (newTotal > 21 && values[i] == 11) newTotal -= 10; // ajuste As
-            if (newTotal >= 17 && newTotal <= 21) safePicks++;
-        }
-        float probB = (float)safePicks / remaining * 100f;
-
-        // PROB C: probabilidad de que el jugador se pase de 21 pidiendo carta
         int bustPicks = 0;
+
+        // UN SOLO BUCLE para calcular las 3 probabilidades
         for (int i = cardIndex; i < faces.Length; i++)
         {
-            int newTotal = playerPoints + values[i];
-            if (newTotal > 21 && values[i] == 11) newTotal -= 10; // ajuste As
-            if (newTotal > 21) bustPicks++;
+            int simulatedCardValue = values[i];
+
+            // --- CÁLCULO PROB A (Dealer supera al jugador) ---
+            // Asumimos que la carta oculta es simulatedCardValue. Solo evaluamos las visibles + la simulada oculta.
+            int dTotal = CalculateDealerSimulatedPoints(simulatedCardValue);
+            if (dTotal > playerPoints && dTotal <= 21)
+            {
+                dealerBeats++;
+            }
+
+            // --- CÁLCULO PROB B y C (Jugador pide carta) ---
+            int pTotal = CalculatePlayerSimulatedPoints(simulatedCardValue);
+
+            if (pTotal >= 17 && pTotal <= 21) safePicks++; // PROB B
+            if (pTotal > 21) bustPicks++;                  // PROB C
         }
+
+        // Calculamos porcentajes
+        float probA = (float)dealerBeats / remaining * 100f;
+        float probB = (float)safePicks / remaining * 100f;
         float probC = (float)bustPicks / remaining * 100f;
 
+        // Ajustamos el texto al formato exacto del PDF
         probMessage.text =
-            "P(dealer supera al jugador): " + probA.ToString("F1") + "%\n" +
-            "P(jugador 17-21 si pide carta): " + probB.ToString("F1") + "%\n" +
-            "P(jugador se pasa si pide carta): " + probC.ToString("F1") + "%";
+            "Dealer > Jugador: " + probA.ToString("F2") + "\n" +
+            "17 <= X <= 21: " + probB.ToString("F2") + "\n" +
+            "X > 21: " + probC.ToString("F2");
+    }
+
+    // --- MÉTODOS AUXILIARES PARA SIMULAR LOS ASES CORRECTAMENTE ---
+
+    private int CalculatePlayerSimulatedPoints(int newCardValue)
+    {
+        int val = 0;
+        int aces = 0;
+        CardHand hand = player.GetComponent<CardHand>();
+
+        // 1. Contamos las cartas que ya tiene en la mano
+        foreach (GameObject g in hand.cards)
+        {
+            int cVal = g.GetComponent<CardModel>().value;
+            if (cVal == 11) aces++;
+            else val += cVal;
+        }
+
+        // 2. Añadimos la carta que estamos simulando
+        if (newCardValue == 11) aces++;
+        else val += newCardValue;
+
+        // 3. Aplicamos la misma lógica de Ases que tiene CardHand.cs
+        for (int i = 0; i < aces; i++)
+        {
+            if (val + 11 <= 21) val += 11;
+            else val += 1;
+        }
+        return val;
+    }
+
+    private int CalculateDealerSimulatedPoints(int hiddenCardValue)
+    {
+        int val = 0;
+        int aces = 0;
+        CardHand hand = dealer.GetComponent<CardHand>();
+
+        // 1. Contamos SOLO las cartas visibles del dealer (desde el índice 1)
+        for (int i = 1; i < hand.cards.Count; i++)
+        {
+            int cVal = hand.cards[i].GetComponent<CardModel>().value;
+            if (cVal == 11) aces++;
+            else val += cVal;
+        }
+
+        // 2. Añadimos la carta oculta simulada
+        if (hiddenCardValue == 11) aces++;
+        else val += hiddenCardValue;
+
+        // 3. Aplicamos la lógica de Ases
+        for (int i = 0; i < aces; i++)
+        {
+            if (val + 11 <= 21) val += 11;
+            else val += 1;
+        }
+        return val;
     }
 
     void PushDealer()
@@ -164,11 +214,6 @@ public class Deck : MonoBehaviour
 
     public void Hit()
     {
-        // Punto 3 del PDF: el jugador pide carta de una en una
-        // Si es la primera vez que pide, revelamos la carta oculta del dealer
-        if (dealer.GetComponent<CardHand>().cards.Count == 2)
-            dealer.GetComponent<CardHand>().InitialToggle();
-
         PushPlayer();
 
         // Punto 4 del PDF: si el jugador supera 21, pierde
