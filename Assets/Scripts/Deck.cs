@@ -33,7 +33,7 @@ public class Deck : MonoBehaviour
         UpdateCreditUI();
 
         if (pointsMessage != null)
-            pointsMessage.text = "0";
+            pointsMessage.text = "Puntos: 0";
         if (probMessage != null)
             probMessage.text = "";
         if (finalMessage != null)
@@ -56,9 +56,9 @@ public class Deck : MonoBehaviour
         var options = new System.Collections.Generic.List<string>();
         for (int i = 10; i <= credit; i += 10)
         {
-            options.Add(i + " Crédits");
+            options.Add(i + " Créditos");
         }
-        if (options.Count == 0) options.Add("0 Crédits");
+        if (options.Count == 0) options.Add("0 Créditos");
         betDropdown.AddOptions(options);
     }
 
@@ -77,7 +77,7 @@ public class Deck : MonoBehaviour
     private void UpdatePointsUI()
     {
         if (pointsMessage != null)
-            pointsMessage.text = player.GetComponent<CardHand>().points.ToString();
+            pointsMessage.text = "Puntos: " + player.GetComponent<CardHand>().points.ToString();
     }
 
     private void ApplyBetResult(bool playerWins, bool isDraw)
@@ -216,9 +216,10 @@ public class Deck : MonoBehaviour
         float probC = (float)bustPicks / remaining * 100f;
 
         probMessage.text =
-            "Dealer > Jugador: " + probA.ToString("F2") + "%\n" +
-            "17 <= X <= 21: " + probB.ToString("F2") + "%\n" +
-            "X > 21: " + probC.ToString("F2") + "%";
+    "Deal > Play:   " + probA.ToString("F4") + "\n" +
+    "17<=X<=21:   " + probB.ToString("F4") + "\n" +
+    "X > 21:   " + probC.ToString("F4");
+
     }
 
     private int CalculatePlayerSimulatedPoints(int newCardValue)
@@ -352,7 +353,7 @@ public class Deck : MonoBehaviour
         probMessage.text = "";
 
         if (pointsMessage != null)
-            pointsMessage.text = "0";
+            pointsMessage.text = "Puntos: 0" ;
 
         InitBetDropdown();
         if (betDropdown != null)
