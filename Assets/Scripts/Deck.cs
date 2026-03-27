@@ -71,7 +71,7 @@ public class Deck : MonoBehaviour
     private void UpdateCreditUI()
     {
         if (creditMessage != null)
-            creditMessage.text = credit.ToString();
+            creditMessage.text = "Credito: " + credit.ToString();
     }
 
     private void UpdatePointsUI()
