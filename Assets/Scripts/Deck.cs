@@ -32,19 +32,19 @@ public class Deck : MonoBehaviour
         InitBetDropdown();
         UpdateCreditUI();
 
-        // Textos iniciales
         if (pointsMessage != null)
             pointsMessage.text = "0";
         if (probMessage != null)
             probMessage.text = "";
         if (finalMessage != null)
-            finalMessage.text = "Pulsa Play Again para empezar";
+            finalMessage.text = "Elige tu apuesta y pulsa Play Again";
 
-        // Desactivar Hit y Stand hasta que pulse Play
         hitButton.interactable = false;
         stickButton.interactable = false;
-    }
 
+        playAgainButton.onClick.RemoveAllListeners();
+        playAgainButton.onClick.AddListener(Deal);
+    }
 
     // ========== SISTEMA DE BANCA ==========
 
@@ -345,19 +345,36 @@ public class Deck : MonoBehaviour
             return;
         }
 
-        hitButton.interactable = true;
-        stickButton.interactable = true;
-        finalMessage.text = "";
-        probMessage.text = "";
         player.GetComponent<CardHand>().Clear();
         dealer.GetComponent<CardHand>().Clear();
         cardIndex = 0;
+        finalMessage.text = "Elige tu apuesta y pulsa Play Again";
+        probMessage.text = "";
+
+        if (pointsMessage != null)
+            pointsMessage.text = "0";
 
         InitBetDropdown();
         if (betDropdown != null)
             betDropdown.interactable = true;
 
+        hitButton.interactable = false;
+        stickButton.interactable = false;
+
+        playAgainButton.onClick.RemoveAllListeners();
+        playAgainButton.onClick.AddListener(Deal);
+    }
+
+    public void Deal()
+    {
+        hitButton.interactable = true;
+        stickButton.interactable = true;
+        finalMessage.text = "";
+
         ShuffleCards();
         StartGame();
+
+        playAgainButton.onClick.RemoveAllListeners();
+        playAgainButton.onClick.AddListener(PlayAgain);
     }
 }
