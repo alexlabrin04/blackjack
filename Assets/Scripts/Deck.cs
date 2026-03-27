@@ -215,6 +215,8 @@ public class Deck : MonoBehaviour
     public void Hit()
     {
         PushPlayer();
+        // Revelamos la carta oculta del dealer aunque el jugador haya perdido
+        dealer.GetComponent<CardHand>().InitialToggle();
 
         // Punto 4 del PDF: si el jugador supera 21, pierde
         if (player.GetComponent<CardHand>().points > 21)
